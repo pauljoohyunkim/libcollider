@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 // h(input, output)
-typedef void (*HashFunction)(uint8_t* const, uint8_t*);
+typedef void (*HashFunction)(const uint8_t[], uint8_t*);
 
 typedef struct Collider_CTX {
     HashFunction H;
