@@ -30,6 +30,7 @@ static int generateRandomBytes(uint8_t *buffer, short len) {
 }
 
 // Constant Memory Attack via Floyd's Cycle Detection Algorithm and iterative application of the hash function.
+// Based on amazing explanation by fgrieu at https://crypto.stackexchange.com/questions/115058/how-can-having-a-cycle-help-finding-a-hash-collision
 int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
     while (true) {
         unsigned long long i = 0, l = 0;
