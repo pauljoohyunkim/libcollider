@@ -12,11 +12,13 @@ typedef struct Collider_CTX {
     uint8_t *init;
     short HashOutputLength;
     uint8_t *seed1;
-    uint8_t *seed1Buffer;
     uint8_t *seed2;
-    uint8_t *seed2Buffer;
+    uint8_t *s11;
+    uint8_t *s21;
+    uint8_t *s12;
+    uint8_t *s22;
 } Collider_CTX;
 
-void cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq, bool retry);
+int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq);
 
 #endif  // COLLIDER_H_
