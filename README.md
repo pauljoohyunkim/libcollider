@@ -1,0 +1,2 @@
+# libcollider
+Hash collision library
