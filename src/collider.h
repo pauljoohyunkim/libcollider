@@ -10,6 +10,7 @@ typedef void (*HashFunction)(const uint8_t[], uint8_t*);
 typedef struct Collider_CTX {
     HashFunction H;
     uint8_t *init;
+    bool randomizeInit;
     short HashOutputLength;
     uint8_t *seed1;
     uint8_t *seed2;

@@ -56,15 +56,21 @@ int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
         if (ctx->init == NULL) {
             fprintf(stderr, "[-] cycleAttack: Initial seed cannot be NULL.\n");
             return -1;
-        } else {
+        } 
+
+        if (ctx->randomizeInit) {
             int ret = generateRandomBytes(ctx->init, ctx->HashOutputLength);
             if (ret < 0) return -1;
         }
+
         if (updateFreq > 0) {
             printf("Initial seed: ");
             printHexArray(ctx->init, ctx->HashOutputLength);
             printf("\n");
         }
+
+        memcpy(ctx->s11, ctx->init, ctx->HashOutputLength);
+        memcpy(ctx->s21, ctx->init, ctx->HashOutputLength);
 
         // Floyd's cycle detection
         do {
@@ -90,7 +96,6 @@ int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
             printf("Computing cycle length...\n");
         }
 
-        printf("Computing cycle length!\n");
         do {
             ctx->H(ctx->s11, ctx->seed1);
             memcpy(ctx->s11, ctx->seed1, ctx->HashOutputLength);
@@ -101,7 +106,7 @@ int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
         } while (memcmp(ctx->seed1, ctx->seed2, ctx->HashOutputLength) != 0);
         if (updateFreq > 0) {
             printf("\nCycle length: %llu\n", l);
-            printf("Resetting and repeating cycle length times to check for \"theoretical collision\".");
+            printf("Resetting and repeating cycle length times to check for \"theoretical collision\".\n");
         }
 
         // Reset
