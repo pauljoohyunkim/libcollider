@@ -4,7 +4,7 @@
 #include <openssl/rand.h>
 #include "collider.h"
 
-void printHexArray(const uint8_t *hexArray, short len) {
+static void printHexArray(const uint8_t *hexArray, short len) {
     if (hexArray == NULL || len == 0) {
         fprintf(stderr, "printHexArray: hexArray == NULL or len == 0.\n");
         return;
@@ -54,6 +54,9 @@ int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
 
         // If ctx->init == NULL, create random initial seed.
         if (ctx->init == NULL) {
+            fprintf(stderr, "[-] cycleAttack: Initial seed cannot be NULL.\n");
+            return -1;
+        } else {
             int ret = generateRandomBytes(ctx->init, ctx->HashOutputLength);
             if (ret < 0) return -1;
         }
