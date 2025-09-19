@@ -29,6 +29,13 @@ static int generateRandomBytes(uint8_t *buffer, short len) {
     return 0;
 }
 
+// Traditional Birthday Attack where one takes out a smaller set of seed values and attempt to find collision.
+// Uses a lot of disk space if you do not precompute the size.
+// Setting warning=True will precompute roughly how much of disk space will be used, and ask you to confirm.
+int birthdayAttack(Collider_CTX *ctx, bool warning) {
+
+}
+
 // Constant Memory Attack via Floyd's Cycle Detection Algorithm and iterative application of the hash function.
 // Based on amazing explanation by fgrieu at https://crypto.stackexchange.com/questions/115058/how-can-having-a-cycle-help-finding-a-hash-collision
 int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
@@ -47,7 +54,7 @@ int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
             fprintf(stderr, "[-] cycleAttack: ctx->HashOutputLength cannot be zero.\n");
             return -1;
         }
-        if (ctx->seed1 == NULL || ctx->s11 == NULL || ctx->seed2 == NULL || ctx->s21 == NULL || ctx->s12 == NULL || ctx->s22 == NULL) {
+        if (ctx->cycle.seed1 == NULL || ctx->cycle.s11 == NULL || ctx->cycle.seed2 == NULL || ctx->cycle.s21 == NULL || ctx->cycle.s12 == NULL || ctx->cycle.s22 == NULL) {
             fprintf(stderr, "[-] cycleAttack: ctx->seed* cannot be NULL.\n");
             return -1;
         }
@@ -69,27 +76,27 @@ int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
             printf("\n");
         }
 
-        memcpy(ctx->s11, ctx->init, ctx->HashOutputLength);
-        memcpy(ctx->s21, ctx->init, ctx->HashOutputLength);
+        memcpy(ctx->cycle.s11, ctx->init, ctx->HashOutputLength);
+        memcpy(ctx->cycle.s21, ctx->init, ctx->HashOutputLength);
 
         // Floyd's cycle detection
         do {
-            // t(seed1) -> H(t)
-            // h(seed2) -> H^2(h)
-            ctx->H(ctx->s11, ctx->seed1);
-            memcpy(ctx->s11, ctx->seed1, ctx->HashOutputLength);
+            // t(cycle.seed1) -> H(t)
+            // h(cycle.seed2) -> H^2(h)
+            ctx->H(ctx->cycle.s11, ctx->cycle.seed1);
+            memcpy(ctx->cycle.s11, ctx->cycle.seed1, ctx->HashOutputLength);
 
-            ctx->H(ctx->s21, ctx->seed2);
-            memcpy(ctx->s21, ctx->seed2, ctx->HashOutputLength);
-            ctx->H(ctx->s21, ctx->seed2);
-            memcpy(ctx->s21, ctx->seed2, ctx->HashOutputLength);
+            ctx->H(ctx->cycle.s21, ctx->cycle.seed2);
+            memcpy(ctx->cycle.s21, ctx->cycle.seed2, ctx->HashOutputLength);
+            ctx->H(ctx->cycle.s21, ctx->cycle.seed2);
+            memcpy(ctx->cycle.s21, ctx->cycle.seed2, ctx->HashOutputLength);
 
             i++;
 
             if (updateFreq > 0 && i % updateFreq == 0) {
                 printf("Current Iteration: %llu\r", i);
             }
-        } while (memcmp(ctx->seed1, ctx->seed2, ctx->HashOutputLength) != 0);
+        } while (memcmp(ctx->cycle.seed1, ctx->cycle.seed2, ctx->HashOutputLength) != 0);
         if (updateFreq > 0) {
             printf("\n");
             printf("Found: H^%llu(s) = H^(2*%llu)(s)\n", i, i);
@@ -97,28 +104,28 @@ int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
         }
 
         do {
-            ctx->H(ctx->s11, ctx->seed1);
-            memcpy(ctx->s11, ctx->seed1, ctx->HashOutputLength);
+            ctx->H(ctx->cycle.s11, ctx->cycle.seed1);
+            memcpy(ctx->cycle.s11, ctx->cycle.seed1, ctx->HashOutputLength);
             l++;
             if (updateFreq > 0 && l % updateFreq == 0) {
                 printf("Current Iteration: %llu\r", l);
             }
-        } while (memcmp(ctx->seed1, ctx->seed2, ctx->HashOutputLength) != 0);
+        } while (memcmp(ctx->cycle.seed1, ctx->cycle.seed2, ctx->HashOutputLength) != 0);
         if (updateFreq > 0) {
             printf("\nCycle length: %llu\n", l);
             printf("Resetting and repeating cycle length times to check for \"theoretical collision\".\n");
         }
 
         // Reset
-        memcpy(ctx->seed1, ctx->init, ctx->HashOutputLength);
-        memcpy(ctx->s11, ctx->init, ctx->HashOutputLength);
-        memcpy(ctx->seed2, ctx->init, ctx->HashOutputLength);
-        memcpy(ctx->s21, ctx->init, ctx->HashOutputLength);
+        memcpy(ctx->cycle.seed1, ctx->init, ctx->HashOutputLength);
+        memcpy(ctx->cycle.s11, ctx->init, ctx->HashOutputLength);
+        memcpy(ctx->cycle.seed2, ctx->init, ctx->HashOutputLength);
+        memcpy(ctx->cycle.s21, ctx->init, ctx->HashOutputLength);
 
         // Repeating cycle length times.
         for (i = 0; i < l; i++) {
-            ctx->H(ctx->s21, ctx->seed2);
-            memcpy(ctx->s21, ctx->seed2, ctx->HashOutputLength);
+            ctx->H(ctx->cycle.s21, ctx->cycle.seed2);
+            memcpy(ctx->cycle.s21, ctx->cycle.seed2, ctx->HashOutputLength);
             if (updateFreq > 0 && i % updateFreq == 0) {
                 printf("Progress: %llu / %llu (%.2lf%%)\r", i, l, (double) i / l * 100);
             }
@@ -127,7 +134,7 @@ int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
             printf("\n");
         }
 
-        if (memcmp(ctx->init, ctx->seed2, ctx->HashOutputLength) == 0) {
+        if (memcmp(ctx->init, ctx->cycle.seed2, ctx->HashOutputLength) == 0) {
             if (updateFreq > 0) {
                 printf("Initial seed turned out to be part of a cycle... Starting over.\n");
             }
@@ -141,41 +148,41 @@ int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
 
         i = 0;
         do {
-            memcpy(ctx->s12, ctx->seed1, ctx->HashOutputLength);
-            memcpy(ctx->s22, ctx->seed2, ctx->HashOutputLength);
+            memcpy(ctx->cycle.s12, ctx->cycle.seed1, ctx->HashOutputLength);
+            memcpy(ctx->cycle.s22, ctx->cycle.seed2, ctx->HashOutputLength);
 
-            ctx->H(ctx->s11, ctx->seed1);
-            memcpy(ctx->s11, ctx->seed1, ctx->HashOutputLength);
-            ctx->H(ctx->s21, ctx->seed2);
-            memcpy(ctx->s21, ctx->seed2, ctx->HashOutputLength);
+            ctx->H(ctx->cycle.s11, ctx->cycle.seed1);
+            memcpy(ctx->cycle.s11, ctx->cycle.seed1, ctx->HashOutputLength);
+            ctx->H(ctx->cycle.s21, ctx->cycle.seed2);
+            memcpy(ctx->cycle.s21, ctx->cycle.seed2, ctx->HashOutputLength);
             i++;
 
             if (updateFreq > 0 && i % updateFreq == 0) {
                 printf("Current Iteration: %llu\r", i);
             }
-        } while (memcmp(ctx->seed1, ctx->seed2, ctx->HashOutputLength) != 0);
+        } while (memcmp(ctx->cycle.seed1, ctx->cycle.seed2, ctx->HashOutputLength) != 0);
         if (updateFreq > 0) {
             printf("\n");
             printf("Seed 1: ");
-            printHexArray(ctx->s12, ctx->HashOutputLength);
+            printHexArray(ctx->cycle.s12, ctx->HashOutputLength);
             printf("\nSeed 2: ");
-            printHexArray(ctx->s22, ctx->HashOutputLength);
+            printHexArray(ctx->cycle.s22, ctx->HashOutputLength);
             printf("\n");
         }
 
-        memcpy(ctx->seed1, ctx->s12, ctx->HashOutputLength);
-        memcpy(ctx->seed2, ctx->s22, ctx->HashOutputLength);
+        memcpy(ctx->cycle.seed1, ctx->cycle.s12, ctx->HashOutputLength);
+        memcpy(ctx->cycle.seed2, ctx->cycle.s22, ctx->HashOutputLength);
 
         if (updateFreq > 0) {
             printf("Checking for the last time if they give the same result.\n");
         }
-        ctx->H(ctx->seed1, ctx->s11);
-        ctx->H(ctx->seed2, ctx->s21);
+        ctx->H(ctx->cycle.seed1, ctx->cycle.s11);
+        ctx->H(ctx->cycle.seed2, ctx->cycle.s21);
 
-        if (memcmp(ctx->s11, ctx->s21, ctx->HashOutputLength) == 0) {
+        if (memcmp(ctx->cycle.s11, ctx->cycle.s21, ctx->HashOutputLength) == 0) {
             if (updateFreq > 0) {
                 printf("Hash: ");
-                printHexArray(ctx->s11, ctx->HashOutputLength);
+                printHexArray(ctx->cycle.s11, ctx->HashOutputLength);
                 printf("\nHash Collision!!!\n");
             }
             return 0;

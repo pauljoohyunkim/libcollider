@@ -12,12 +12,20 @@ typedef struct Collider_CTX {
     uint8_t *init;
     bool randomizeInit;
     short HashOutputLength;
-    uint8_t *seed1;
-    uint8_t *seed2;
-    uint8_t *s11;
-    uint8_t *s21;
-    uint8_t *s12;
-    uint8_t *s22;
+    union {
+        struct {
+            
+        } birthday;
+
+        struct {
+            uint8_t *seed1;
+            uint8_t *seed2;
+            uint8_t *s11;
+            uint8_t *s21;
+            uint8_t *s12;
+            uint8_t *s22;
+        } cycle;
+    };
 } Collider_CTX;
 
 int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq);
