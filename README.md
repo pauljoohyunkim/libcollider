@@ -11,16 +11,16 @@ uint8_t s11[SEED_KEY_LEN] = { 0 };
 uint8_t s12[SEED_KEY_LEN] = { 0 };
 uint8_t s21[SEED_KEY_LEN] = { 0 };
 uint8_t s22[SEED_KEY_LEN] = { 0 };
-Collider_CTX ctx = { .H = hashfun,
-    .init = init,
-    .randomizeInit = true,
-    .HashOutputLength = LEN,
-    .seed1 = seed1,
-    .seed2 = seed2,
-    .s11 = s11,
-    .s12 = s12,
-    .s21 = s21,
-    .s22 = s22
+Collider_CTX ctx = { .cycle.H = hashfun,
+    .cycle.init = init,
+    .cycle.randomizeInit = true,
+    .cycle.HashOutputLength = LEN,
+    .cycle.seed1 = seed1,
+    .cycle.seed2 = seed2,
+    .cycle.s11 = s11,
+    .cycle.s12 = s12,
+    .cycle.s21 = s21,
+    .cycle.s22 = s22
 };
 // Update every 100000 iterations.
 // Setting updateFreq to zero suppresses all outputs.

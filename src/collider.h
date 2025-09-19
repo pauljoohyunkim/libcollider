@@ -10,14 +10,15 @@ typedef void (*HashFunction)(const uint8_t[], uint8_t*);
 typedef struct Collider_CTX {
     HashFunction H;
     uint8_t *init;
-    bool randomizeInit;
     short HashOutputLength;
     union {
         struct {
-            
+            short segmentLength;
+            unsigned long long sampleSize;
         } birthday;
 
         struct {
+            bool randomizeInit;
             uint8_t *seed1;
             uint8_t *seed2;
             uint8_t *s11;

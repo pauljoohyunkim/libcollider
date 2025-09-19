@@ -2,7 +2,10 @@
 #include <stdbool.h>
 #include <string.h>
 #include <openssl/rand.h>
+#include <math.h>
 #include "collider.h"
+
+static inline int intpow(int a, int n) { return (int)(pow(a, n) + 0.5); }
 
 static void printHexArray(const uint8_t *hexArray, short len) {
     if (hexArray == NULL || len == 0) {
@@ -32,12 +35,46 @@ static int generateRandomBytes(uint8_t *buffer, short len) {
 // Traditional Birthday Attack where one takes out a smaller set of seed values and attempt to find collision.
 // Uses a lot of disk space if you do not precompute the size.
 // Setting warning=True will precompute roughly how much of disk space will be used, and ask you to confirm.
-int birthdayAttack(Collider_CTX *ctx, bool warning) {
+int birthdayAttack(Collider_CTX *ctx, unsigned long long updateFreq, bool warning) {
+    FILE ** segFiles = NULL;
+    unsigned long long nSegFiles = 0;
+    if (ctx == NULL) {
+        fprintf(stderr, "[-] cycleAttack: ctx not given.\n");
+        return -1;
+    }
+    if (ctx->H == NULL) {
+        fprintf(stderr, "[-] cycleAttack: ctx->H (hash function) not given.\n");
+        return -1;
+    }
+    if (ctx->HashOutputLength == 0) {
+        fprintf(stderr, "[-] cycleAttack: ctx->HashOutputLength cannot be zero.\n");
+        return -1;
+    }
+    if (ctx->cycle.seed1 == NULL || ctx->cycle.s11 == NULL || ctx->cycle.seed2 == NULL || ctx->cycle.s21 == NULL || ctx->cycle.s12 == NULL || ctx->cycle.s22 == NULL) {
+        fprintf(stderr, "[-] cycleAttack: ctx->seed* cannot be NULL.\n");
+        return -1;
+    }
+
+    // If ctx->init == NULL, create random initial seed.
+    if (ctx->init == NULL) {
+        fprintf(stderr, "[-] cycleAttack: Initial seed cannot be NULL.\n");
+        return -1;
+    } 
+
+    nSegFiles = (unsigned long long) intpow(256, ctx->birthday.segmentLength);
+
+    // segmentLength = 1 -> segment file by the first byte
+    // segmentLength = 2 -> segment file by the first two bytes.
+    // segmentLength = i -> segment file by the first i bytes.
+    segFiles = (FILE **) malloc(sizeof(FILE *) * nSegFiles);
 
 }
 
 // Constant Memory Attack via Floyd's Cycle Detection Algorithm and iterative application of the hash function.
 // Based on amazing explanation by fgrieu at https://crypto.stackexchange.com/questions/115058/how-can-having-a-cycle-help-finding-a-hash-collision
+// Returns 0 for successful attack
+// Returns 1 for failed attack
+// Returns -1 for miscellaneous error.
 int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
     while (true) {
         unsigned long long i = 0, l = 0;
@@ -65,7 +102,7 @@ int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
             return -1;
         } 
 
-        if (ctx->randomizeInit) {
+        if (ctx->cycle.randomizeInit) {
             int ret = generateRandomBytes(ctx->init, ctx->HashOutputLength);
             if (ret < 0) return -1;
         }
@@ -190,7 +227,7 @@ int cycleAttack(Collider_CTX *ctx, unsigned long long updateFreq) {
             if (updateFreq > 0) {
                 printf("False alarm :(\n");
             }
-            return -1;
+            return 1;
         }
     }
 }
